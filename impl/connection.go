@@ -2,6 +2,7 @@ package impl
 
 import (
 	"errors"
+	"log"
 	"sync"
 
 	"github.com/gorilla/websocket"
@@ -22,13 +23,13 @@ type Connection struct {
 
 // 读取Api
 func (conn *Connection) ReadMessage() (data []byte, err error) {
-	//select是Go中的一个控制结构，类似于用于通信的switch语句。每个case必须是一个通信操作，要么是发送要么是接收。 select随机执行一个可运行的case。如果没有case可运行，它将阻塞，直到有case可运行。一个默认的子句应该总是可运行的。
 	select {
 	case data = <-conn.inChan:
 	case <-conn.closeChan:
 		err = errors.New("connection is closed")
 	}
-	return
+
+	return data, err
 }
 
 // 发送Api
@@ -38,7 +39,8 @@ func (conn *Connection) WriteMessage(data []byte) (err error) {
 	case <-conn.closeChan:
 		err = errors.New("connection is closed")
 	}
-	return
+
+	return err
 }
 
 // 关闭连接的Api
@@ -51,6 +53,7 @@ func (conn *Connection) Close() {
 		close(conn.closeChan)
 		conn.isClosed = true
 	}
+
 	conn.mutex.Unlock()
 
 }
@@ -64,13 +67,10 @@ func InitConnection(wsConn *websocket.Conn) (conn *Connection, err error) {
 		closeChan: make(chan byte, 1),
 	}
 
-	// 启动读协程
 	go conn.readLoop()
-
-	// 启动写协程
 	go conn.writeLoop()
 
-	return
+	return conn, err
 }
 
 // 内部实现
@@ -79,8 +79,10 @@ func (conn *Connection) readLoop() {
 		data []byte
 		err  error
 	)
+
 	for {
 		if _, data, err = conn.wsConn.ReadMessage(); err != nil {
+			log.Println("ReadMessage error" + err.Error())
 			goto ERR
 		}
 		// 容易阻塞到这里，等待inChan有空闲的位置
@@ -100,17 +102,21 @@ func (conn *Connection) writeLoop() {
 		data []byte
 		err  error
 	)
+
 	for {
 		select {
 		case data = <-conn.outChan:
 		case <-conn.closeChan:
 			goto ERR
 		}
+
 		data = <-conn.outChan
 		if err = conn.wsConn.WriteMessage(websocket.TextMessage, data); err != nil {
+			log.Println("WriteMessage error" + err.Error())
 			goto ERR
 		}
 	}
+
 ERR:
 	conn.Close()
 }

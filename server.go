@@ -32,20 +32,22 @@ func wsHandler(w http.ResponseWriter, r *http.Request) {
 	)
 	// 完成http应答，在httpheader中放下如下参数
 	if wsConn, err = upgrader.Upgrade(w, r, nil); err != nil {
+		log.Println("connection filed")
 		return // 获取连接失败直接返回
 	}
 
 	if conn, err = impl.InitConnection(wsConn); err != nil {
+		log.Println("init connection error" + err.Error())
 		goto ERR
 	}
 
 	go func() {
-		var (
-			err error
-		)
+		var err error
+
 		for {
 			// 每隔一秒发送一次心跳
 			if err = conn.WriteMessage([]byte("heartbeat")); err != nil {
+				log.Println(err)
 				return
 			}
 			time.Sleep(1 * time.Second)
@@ -55,9 +57,11 @@ func wsHandler(w http.ResponseWriter, r *http.Request) {
 
 	for {
 		if data, err = conn.ReadMessage(); err != nil {
+			log.Println(err)
 			goto ERR
 		}
 		if err = conn.WriteMessage(data); err != nil {
+			log.Println(err)
 			goto ERR
 		}
 	}
