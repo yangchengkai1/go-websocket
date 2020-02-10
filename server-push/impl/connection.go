@@ -19,6 +19,7 @@ type Connection struct {
 	mutex     sync.Mutex
 	// chan是否被关闭
 	isClosed bool
+	ID       int64
 }
 
 // 读取Api

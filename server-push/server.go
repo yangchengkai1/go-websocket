@@ -6,7 +6,7 @@ import (
 	"time"
 
 	"github.com/gorilla/websocket"
-	"github.com/yangchengkai1/go-websocket/impl"
+	"github.com\yangchengkai1\go-websocket\server-push\impl"
 )
 
 var (
@@ -32,7 +32,7 @@ func wsHandler(w http.ResponseWriter, r *http.Request) {
 	)
 	// 完成http应答，在httpheader中放下如下参数
 	if wsConn, err = upgrader.Upgrade(w, r, nil); err != nil {
-		log.Println("connection filed")
+		log.Println("connection filed" + err.Error())
 		return // 获取连接失败直接返回
 	}
 
